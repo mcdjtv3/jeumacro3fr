@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulateur de la Demande Globale</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 900px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .slider-container {
+            margin: 20px 0;
+        }
+        label {
+            font-weight: bold;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 8px;
+            background: linear-gradient(to right, #ff5722 0%, #ddd 0%); /* Initial background */
+            border-radius: 5px;
+            outline: none;
+            transition: background 0.3s ease-in-out;
+        }
+
+        /* Style du curseur */
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 40px;
+            height: 40px;
+            background: url('images/flame.png') no-repeat center center;
+            background-size: cover;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 40px;
+            height: 40px;
+            background: url('images/flame.png') no-repeat center center;
+            background-size: cover;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
+
+        /* Hover effect */
+        input[type="range"]::-webkit-slider-thumb:hover {
+            background: url('images/hover.png') no-repeat center center;
+            background-size: cover;
+            transform: scale(1.2);
+        }
+
+        input[type="range"]::-moz-range-thumb:hover {
+            background: url('images/hover.png') no-repeat center center;
+            background-size: cover;
+            transform: scale(1.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Simulateur de la Demande Globale</h1>
+
+        <!-- Slider to control percentage of government spending -->
+        <div class="slider-container">
+            <label for="govSpending">Pourcentage de Dépense Gouvernementale (G): <span id="govSpendingValue">20%</span></label>
+            <input type="range" id="govSpending" min="5" max="50" value="20" oninput="updateValues(); updateSlider(this);">
+        </div>
+
+        <!-- Slider to control percentage of investment -->
+        <div class="slider-container">
+            <label for="investment">Pourcentage d'Investissement (I): <span id="investmentValue">20%</span></label>
+            <input type="range" id="investment" min="5" max="50" value="20" oninput="updateValues(); updateSlider(this);">
+        </div>
+
+        <!-- Chart for Global Demand -->
+        <canvas id="global-demand-chart" width="800" height="400"></canvas>
+    </div>
+
+    <script>
+        function updateSlider(slider) {
+            const value = (slider.value - slider.min) / (slider.max - slider.min) * 100;
+            slider.style.background = `linear-gradient(to right, #ff5722 ${value}%, #ddd ${value}%)`;
+        }
+
+        // Initial setup for Chart.js
+        const ctxDemand = document.getElementById('global-demand-chart').getContext('2d');
+
+        let govSpendingPercent = 20;  // Government spending as a percentage of revenue
+        let investmentPercent = 20;   // Investment as a percentage of revenue
+
+        const demandChart = new Chart(ctxDemand, {
+            type: 'line',
+            data: {
+                labels: [100, 200, 300, 400, 500],  // Revenue levels
+                datasets: [
+                    {
+                        label: 'Consommation (C)',
+                        data: [],
+                        borderColor: '#C7253E',
+                        fill: false
+                    },
+                    {
+                        label: 'Investissement (I)',
+                        data: [],
+                        borderColor: '#FF6500',
+                        fill: false
+                    },
+                    {
+                        label: 'Dépense Gouvernementale (G)',
+                        data: [],
+                        borderColor: 'orange',
+                        fill: false
+                    },
+                    {
+                        label: 'Demande Globale (C + I + G)',
+                        data: [],
+                        borderColor: 'red',
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                scales: {
+                    x: { title: { display: true, text: 'Revenu (Y)' } },
+                    y: { title: { display: true, text: 'Valeur' } }
+                }
+            }
+        });
+
+        function updateValues() {
+            govSpendingPercent = parseFloat(document.getElementById('govSpending').value);
+            investmentPercent = parseFloat(document.getElementById('investment').value);
+
+            document.getElementById('govSpendingValue').textContent = govSpendingPercent + '%';
+            document.getElementById('investmentValue').textContent = investmentPercent + '%';
+
+            updateCharts();
+        }
+
+        function updateCharts() {
+            const revenue = [100, 200, 300, 400, 500];  // Levels of income
+            const PmC = 0.8;  // Propensity to Consume of 80%
+
+            // Consumption and Investment functions
+            const consumption = revenue.map(y => y * PmC);  // 80% of income goes to consumption
+            const investment = revenue.map(y => y * (investmentPercent / 100));  // Investment as a percentage of revenue
+            const governmentSpending = revenue.map(y => y * (govSpendingPercent / 100));  // Government spending as a percentage of revenue
+            const globalDemand = revenue.map((y, i) => consumption[i] + investment[i] + governmentSpending[i]);
+
+            // Update the Global Demand chart datasets
+            demandChart.data.datasets[0].data = consumption;
+            demandChart.data.datasets[1].data = investment;
+            demandChart.data.datasets[2].data = governmentSpending;
+            demandChart.data.datasets[3].data = globalDemand;
+            demandChart.update();
+        }
+
+        updateValues();  // Initialize charts on load
+    </script>
+</body>
+</html>
